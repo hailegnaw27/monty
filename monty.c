@@ -1,51 +1,65 @@
 #include "monty.h"
+#include <stdio.h>   /* for fgets */
+#include <stdlib.h>  /* for exit */
 
 /**
- * push - Pushes an element onto the stack.
- * @stack: Double pointer to the head of the stack
- * @value: Value to be pushed
+ * main - Entry point for the Monty Bytecode Interpreter.
+ * @argc: Number of command-line arguments.
+ * @argv: Array of command-line arguments.
  *
- * Return: None
+ * Return: EXIT_SUCCESS on success, EXIT_FAILURE on failure.
  */
-void push(stack_t **stack, int value)
+int main(int argc, char **argv)
 {
-    stack_t *new_node = malloc(sizeof(stack_t));
-    if (new_node == NULL)
+    FILE *fp;
+    char *line = NULL, *opcode = NULL;
+    size_t len = 0;
+    unsigned int line_number = 0;
+    instruction_t instruction;
+    stack_t *stack = NULL;
+
+    if (argc != 2)
     {
-        fprintf(stderr, "Error: malloc failed\n");
+        fprintf(stderr, "USAGE: monty file\n");
         exit(EXIT_FAILURE);
     }
 
-    new_node->n = value;
-    new_node->prev = NULL;
-    new_node->next = NULL;
+    fp = fopen(argv[1], "r");
+    if (fp == NULL)
+    {
+        fprintf(stderr, "Error: Can't open file %s\n", argv[1]);
+        exit(EXIT_FAILURE);
+    }
 
-    if (*stack == NULL)
+    while (fgets(line, len, fp) != NULL)
     {
-        *stack = new_node;
+        line_number++;
+        opcode = strtok(line, " \t\n");
+
+        if (opcode == NULL || *opcode == '#') {
+          continue;
+        }
+        
+        instruction.opcode = opcode;
+        instruction.f = NULL;
+
+        if (strcmp(opcode, "push") == 0) {
+          instruction.f = push;
+        }
+        else if (strcmp(opcode, "pall") == 0) {
+          instruction.f = pall;
+        }
+        else {
+          fprintf(stderr, "L%u: unknown instruction %s\n", line_number, opcode);
+          exit(EXIT_FAILURE);
+        }
+
+        instruction.f(&stack, line_number);
     }
-    else
-    {
-        new_node->next = *stack;
-        (*stack)->prev = new_node;
-        *stack = new_node;
-    }
+
+    free_stack(&stack);
+    free(line);
+    fclose(fp);
+
+    return EXIT_SUCCESS;
 }
-
-/**
- * pall - Prints all the values on the stack
- * @stack: Double pointer to the head of the stack
- *
- * Return: None
- */
-void pall(stack_t **stack)
-{
-    stack_t *current = *stack;
-
-    while (current != NULL)
-    {
-        printf("%d\n", current->n);
-        current = current->next;
-    }
-}
-
